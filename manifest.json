@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Crisp Chat Rewriter",
+  "version": "1.0",
+  "description": "AI-powered text rewriting, reply suggestions, and greeting shortcuts for Crisp chat",
+  "permissions": ["storage", "activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://app.crisp.chat/*"],
+      "js": ["config.js", "providers.js", "content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

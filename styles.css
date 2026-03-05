@@ -1,0 +1,128 @@
+/* Rewrite Button */
+.crx-rewrite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin-left: 6px;
+  border: none;
+  border-radius: 4px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  vertical-align: middle;
+  line-height: 1;
+  height: 26px;
+}
+
+.crx-rewrite-btn:hover {
+  background: #2563eb;
+}
+
+.crx-rewrite-btn--loading {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.crx-rewrite-btn__icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Reply Suggestions Popup */
+.crx-reply-popup {
+  position: absolute;
+  z-index: 10000;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 6px 0;
+  min-width: 240px;
+  max-width: 360px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+}
+
+.crx-reply-popup__title {
+  padding: 4px 12px 6px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.crx-reply-popup__item {
+  padding: 8px 12px;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.1s;
+  line-height: 1.4;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  display: block;
+}
+
+.crx-reply-popup__item:hover {
+  background: #334155;
+}
+
+.crx-reply-popup__loading {
+  padding: 12px;
+  color: #94a3b8;
+  text-align: center;
+  font-style: italic;
+}
+
+/* Greeting Icons */
+.crx-greeting-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  padding: 0;
+  margin-left: 2px;
+  opacity: 0.7;
+}
+
+.crx-greeting-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  opacity: 1;
+}
+
+/* Auto-Rewrite Timer */
+.crx-auto-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin-left: 6px;
+  border: none;
+  border-radius: 4px;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  vertical-align: middle;
+  line-height: 1;
+  height: 26px;
+}
+
+.crx-auto-timer:hover {
+  background: #d97706;
+}
