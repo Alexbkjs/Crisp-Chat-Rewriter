@@ -1,2 +1,2 @@
-# Sensitive config (contains API keys)
+# Legacy local config that held the API key — no longer used, keep it out of git
 config.js

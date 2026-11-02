@@ -1,11 +1,12 @@
 const DEFAULTS = {
   provider: 'openai',
-  openaiKey: CONFIG.OPENAI_API_KEY,
-  openaiModel: CONFIG.OPENAI_MODEL,
+  openaiKey: '',
+  openaiModel: 'gpt-4.1-mini',
   rewriterTone: 'more-formal',
   rewriterLength: 'as-is',
   autoRewriteEnabled: false,
-  autoRewriteDelay: 5
+  autoRewriteDelay: 5,
+  replySuggestMode: 'hover'
 };
 
 const providerSelect = document.getElementById('provider');
@@ -29,6 +30,7 @@ chrome.storage.sync.get(DEFAULTS, (settings) => {
   document.getElementById('rewriter-length').value = settings.rewriterLength;
   document.getElementById('auto-rewrite-enabled').checked = settings.autoRewriteEnabled;
   document.getElementById('auto-rewrite-delay').value = settings.autoRewriteDelay;
+  document.getElementById('reply-suggest-mode').value = settings.replySuggestMode;
   toggleSections();
 });
 
@@ -41,7 +43,8 @@ document.getElementById('save').addEventListener('click', () => {
     rewriterTone: document.getElementById('rewriter-tone').value,
     rewriterLength: document.getElementById('rewriter-length').value,
     autoRewriteEnabled: document.getElementById('auto-rewrite-enabled').checked,
-    autoRewriteDelay: parseInt(document.getElementById('auto-rewrite-delay').value, 10) || 10
+    autoRewriteDelay: parseInt(document.getElementById('auto-rewrite-delay').value, 10) || 5,
+    replySuggestMode: document.getElementById('reply-suggest-mode').value
   };
 
   chrome.storage.sync.set(settings, () => {

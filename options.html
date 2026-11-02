@@ -15,7 +15,7 @@
     h1 { font-size: 22px; margin-bottom: 24px; }
     h2 { font-size: 15px; margin: 24px 0 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
     label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
-    select, input[type="text"] {
+    select, input[type="text"], input[type="password"] {
       width: 100%;
       padding: 8px 12px;
       border: 1px solid #334155;
@@ -59,11 +59,11 @@
     <h2>OpenAI Settings</h2>
     <div class="field">
       <label for="openai-key">API Key</label>
-      <input type="text" id="openai-key" placeholder="sk-..." />
+      <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off" />
     </div>
     <div class="field">
       <label for="openai-model">Model</label>
-      <input type="text" id="openai-model" placeholder="gpt-3.5-turbo" />
+      <input type="text" id="openai-model" placeholder="gpt-4.1-mini" />
     </div>
   </div>
 
@@ -99,10 +99,19 @@
     <input type="text" id="auto-rewrite-delay" placeholder="5" />
   </div>
 
+  <h2>Reply Suggestions</h2>
+  <div class="field">
+    <label for="reply-suggest-mode">Show suggestions when hovering a customer's avatar</label>
+    <select id="reply-suggest-mode">
+      <option value="hover">On hover</option>
+      <option value="alt">Only while holding Alt</option>
+      <option value="off">Disabled</option>
+    </select>
+  </div>
+
   <button id="save">Save Settings</button>
   <span class="saved" id="saved">Saved!</span>
 
-  <script src="config.js"></script>
   <script src="options.js"></script>
 </body>
 </html>
