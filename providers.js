@@ -1,36 +1,6 @@
-// LLM Provider Abstraction
+// OpenAI client: grammar fixes (Alt+Q) and reply suggestions
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
-
-class RewriterProvider {
-  async rewrite(text) {
-    // Current Chrome exposes a global `Rewriter`; older builds used `self.ai.rewriter`
-    const api = self.Rewriter || (self.ai && self.ai.rewriter);
-    if (!api) {
-      throw new Error('Built-in Rewriter API is not available in this browser.');
-    }
-    if (api.availability && (await api.availability()) === 'unavailable') {
-      throw new Error('Built-in Rewriter API is unavailable on this device.');
-    }
-
-    const settings = await chrome.storage.sync.get({
-      rewriterTone: 'more-formal',
-      rewriterLength: 'as-is'
-    });
-
-    const rewriter = await api.create({
-      tone: settings.rewriterTone,
-      length: settings.rewriterLength,
-      format: 'plain-text'
-    });
-
-    try {
-      return await rewriter.rewrite(text);
-    } finally {
-      rewriter.destroy();
-    }
-  }
-}
 
 class OpenAIProvider {
   constructor(apiKey, model) {
@@ -136,20 +106,6 @@ function parseReplies(response) {
       .trim())
     .filter(l => /[a-z0-9]/i.test(l) && !/^"?replies"?\s*:/i.test(l))
     .slice(0, 3);
-}
-
-async function getProvider() {
-  const settings = await chrome.storage.sync.get({
-    provider: 'openai',
-    openaiKey: '',
-    openaiModel: DEFAULT_OPENAI_MODEL
-  });
-
-  if (settings.provider === 'rewriter') {
-    return new RewriterProvider();
-  }
-
-  return new OpenAIProvider(settings.openaiKey, settings.openaiModel);
 }
 
 async function getOpenAIProvider() {

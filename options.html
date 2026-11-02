@@ -40,63 +40,19 @@
     }
     button:hover { background: #2563eb; }
     .saved { color: #4ade80; font-size: 13px; margin-left: 12px; display: none; }
-    .openai-settings, .rewriter-settings { display: none; }
-    .openai-settings.visible, .rewriter-settings.visible { display: block; }
   </style>
 </head>
 <body>
   <h1>Crisp Chat Rewriter</h1>
 
+  <h2>OpenAI</h2>
   <div class="field">
-    <label for="provider">Rewriting Provider</label>
-    <select id="provider">
-      <option value="openai">OpenAI API</option>
-      <option value="rewriter">Built-in Rewriter API (Local)</option>
-    </select>
-  </div>
-
-  <div class="openai-settings" id="openai-settings">
-    <h2>OpenAI Settings</h2>
-    <div class="field">
-      <label for="openai-key">API Key</label>
-      <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off" />
-    </div>
-    <div class="field">
-      <label for="openai-model">Model</label>
-      <input type="text" id="openai-model" placeholder="gpt-4.1-mini" />
-    </div>
-  </div>
-
-  <div class="rewriter-settings" id="rewriter-settings">
-    <h2>Rewriter API Settings</h2>
-    <div class="field">
-      <label for="rewriter-tone">Tone</label>
-      <select id="rewriter-tone">
-        <option value="more-formal">More Formal</option>
-        <option value="more-casual">More Casual</option>
-        <option value="as-is">As Is</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="rewriter-length">Length</label>
-      <select id="rewriter-length">
-        <option value="as-is">As Is</option>
-        <option value="shorter">Shorter</option>
-        <option value="longer">Longer</option>
-      </select>
-    </div>
-  </div>
-
-  <h2>Auto-Rewrite</h2>
-  <div class="field">
-    <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
-      <input type="checkbox" id="auto-rewrite-enabled" style="width: auto; margin: 0;" />
-      Enable auto-rewrite timer
-    </label>
+    <label for="openai-key">API Key</label>
+    <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off" />
   </div>
   <div class="field">
-    <label for="auto-rewrite-delay">Delay (seconds)</label>
-    <input type="text" id="auto-rewrite-delay" placeholder="5" />
+    <label for="openai-model">Model</label>
+    <input type="text" id="openai-model" placeholder="gpt-4.1-mini" />
   </div>
 
   <h2>Reply Suggestions</h2>

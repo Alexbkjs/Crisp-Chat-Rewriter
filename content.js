@@ -4,8 +4,6 @@
 
   console.log('[Crisp Rewriter] Extension loaded');
 
-  let isProgrammaticInput = false; // guard to ignore our own replaceEditorText input events
-
   // ── Lexical Editor Helpers ──
 
   function findLexicalEditor() {
@@ -36,7 +34,6 @@
 
   async function replaceEditorText(editor, text) {
     if (!editor) return false;
-    isProgrammaticInput = true;
 
     // Simulate Ctrl+A so Lexical selects everything
     editor.focus();
@@ -65,24 +62,22 @@
 
     editor.dispatchEvent(new Event('input', { bubbles: true }));
     setCaretAtEnd(editor);
-    isProgrammaticInput = false;
     return true;
   }
 
-  // ── Shared rewrite function ──
-  // Used by Alt+Q, the Rewrite button and the auto-rewrite timer
+  // ── Feature 1: Alt+Q Grammar Fix ──
+
+  let isRewriting = false;
 
   async function rewriteEditor(editor) {
     if (!editor || isRewriting) return;
     const text = getEditorText(editor);
     if (!text) return;
 
-    cancelAutoRewrite(); // a manual rewrite supersedes a pending auto-rewrite
     isRewriting = true;
-    updateTimerDisplay();
     try {
-      const provider = await getProvider();
-      const result = await provider.rewrite(text);
+      const openai = await getOpenAIProvider();
+      const result = await openai.rewrite(text);
       // Don't clobber text the agent typed (or a different conversation) while we waited
       if (!editor.isConnected || getEditorText(editor) !== text) {
         console.warn('[Crisp Rewriter] Editor changed during rewrite — result discarded');
@@ -91,11 +86,8 @@
       await replaceEditorText(editor, result.trim());
     } finally {
       isRewriting = false;
-      updateTimerDisplay();
     }
   }
-
-  // ── Feature 1: Alt+Q Shortcut ──
 
   document.addEventListener('keydown', async function (e) {
     const isAltQ = e.altKey && (e.code === 'KeyQ' || (e.key && e.key.toLowerCase() === 'q'));
@@ -113,152 +105,13 @@
     }
   }, true);
 
-  // ── Feature 5: Auto-Rewrite Timer ──
-
-  let autoRewriteRemaining = 0;
-  let autoRewriteInterval = null;
-  let autoRewriteTimerEl = null;
-  let isRewriting = false;
-  let needsRewrite = false;       // true when user typed new text that hasn't been rewritten
-
-  function getAutoRewriteSettings() {
-    return new Promise(resolve => {
-      chrome.storage.sync.get({
-        autoRewriteEnabled: false,
-        autoRewriteDelay: 5
-      }, resolve);
-    });
-  }
-
-  function stopTimerTick() {
-    clearInterval(autoRewriteInterval);
-    autoRewriteInterval = null;
-  }
-
-  function cancelAutoRewrite() {
-    stopTimerTick();
-    autoRewriteRemaining = 0;
-    needsRewrite = false;
-    updateTimerDisplay();
-  }
-
-  function updateTimerDisplay() {
-    if (!autoRewriteTimerEl) return;
-    if (autoRewriteRemaining > 0 && autoRewriteInterval) {
-      // Actively counting down
-      autoRewriteTimerEl.textContent = `⏱ ${autoRewriteRemaining}s`;
-      autoRewriteTimerEl.style.display = 'inline-flex';
-      autoRewriteTimerEl.title = 'Click to cancel auto-rewrite';
-    } else if (autoRewriteRemaining > 0 && !autoRewriteInterval) {
-      // Paused (editor lost focus)
-      autoRewriteTimerEl.textContent = `⏸ ${autoRewriteRemaining}s`;
-      autoRewriteTimerEl.style.display = 'inline-flex';
-      autoRewriteTimerEl.title = 'Paused — focus editor to resume';
-    } else if (isRewriting) {
-      autoRewriteTimerEl.textContent = '⏳ …';
-      autoRewriteTimerEl.style.display = 'inline-flex';
-      autoRewriteTimerEl.title = 'Rewriting…';
-    } else {
-      autoRewriteTimerEl.style.display = 'none';
-    }
-  }
-
-  function startTicking() {
-    if (autoRewriteInterval) return; // already ticking
-    autoRewriteInterval = setInterval(() => {
-      autoRewriteRemaining--;
-      updateTimerDisplay();
-      if (autoRewriteRemaining <= 0) {
-        stopTimerTick();
-        triggerAutoRewrite();
-      }
-    }, 1000);
-  }
-
-  async function resetCountdown() {
-    const settings = await getAutoRewriteSettings();
-    if (!settings.autoRewriteEnabled) return;
-
-    stopTimerTick();
-    autoRewriteRemaining = settings.autoRewriteDelay;
-    needsRewrite = true;
-    updateTimerDisplay();
-
-    // Only tick if editor is focused
-    const editor = findLexicalEditor();
-    if (editor && (document.activeElement === editor || editor.contains(document.activeElement))) {
-      startTicking();
-    }
-  }
-
-  async function triggerAutoRewrite() {
-    const editor = findLexicalEditor();
-    if (!editor || !getEditorText(editor)) { cancelAutoRewrite(); return; }
-
-    try {
-      await rewriteEditor(editor);
-    } catch (err) {
-      console.error('[Crisp Rewriter] Auto-rewrite error:', err);
-    }
-  }
-
-  // Listen for user input on any lexical editor — reset timer on new input
-  document.addEventListener('input', async (e) => {
-    if (isProgrammaticInput) return; // ignore our own replaceEditorText calls
-    if (!e.target || !e.target.closest) return;
-    const editor = e.target.closest('[data-lexical-editor][contenteditable="true"]');
-    if (!editor) return;
-
-    // Only when editor is focused
-    if (document.activeElement !== editor && !editor.contains(document.activeElement)) return;
-
-    const settings = await getAutoRewriteSettings();
-    if (!settings.autoRewriteEnabled) return;
-
-    // New user input → reset countdown
-    resetCountdown();
-  }, true);
-
-  // Pause ticking when editor loses focus (preserve remaining time)
-  document.addEventListener('focusout', (e) => {
-    if (!e.target || !e.target.closest) return;
-    const editor = e.target.closest('[data-lexical-editor][contenteditable="true"]');
-    if (editor) {
-      stopTimerTick(); // pause, keep autoRewriteRemaining & needsRewrite
-      updateTimerDisplay();
-    }
-  }, true);
-
-  // Resume ticking when editor regains focus (if there's remaining time)
-  document.addEventListener('focusin', (e) => {
-    if (!e.target || !e.target.closest) return;
-    const editor = e.target.closest('[data-lexical-editor][contenteditable="true"]');
-    if (editor && needsRewrite && autoRewriteRemaining > 0) {
-      startTicking();
-    }
-  }, true);
-
   // Our controls live only in the composer tabs bar, never in the conversation menu header
   function findComposerTabsBar() {
     return document.querySelector('.c-conversation-box__tabs .c-base-tabs__items')
       || document.querySelector('.c-conversation-box__tabs');
   }
 
-  function injectTimerElement() {
-    const tabsBar = findComposerTabsBar();
-    if (!tabsBar || tabsBar.querySelector('.crx-auto-timer')) return;
-
-    const timer = document.createElement('button');
-    timer.className = 'crx-auto-timer';
-    timer.style.display = 'none';
-    timer.addEventListener('click', () => {
-      cancelAutoRewrite();
-    });
-    tabsBar.appendChild(timer);
-    autoRewriteTimerEl = timer;
-  }
-
-  // ── Feature 3: Reply Suggestions on Avatar Hover ──
+  // ── Feature 2: Reply Suggestions on Avatar Hover ──
   // Hovering a customer's avatar shows suggestions for that customer message.
   // Modes: 'hover', 'alt' (only while Alt is held), 'off'
 
@@ -439,7 +292,7 @@
     altDown = false;
   });
 
-  // ── Feature 4: Greeting Icons ──
+  // ── Feature 3: Greeting Icons ──
 
   function getFirstName() {
     const nick = document.querySelector('.c-conversation-profile__nickname');
@@ -472,7 +325,7 @@
     });
   }
 
-  // ── Feature 6: Copy Store Link ──
+  // ── Feature 4: Copy Store Link ──
   // Copy icon before the profile's employment link: click copies the URL without the protocol,
   // Alt+click copies the link text
 
@@ -535,7 +388,6 @@
   // Crisp is a SPA — re-inject UI elements when DOM changes
 
   function injectAll() {
-    injectTimerElement();
     injectGreetingIcons();
     injectCopyLinkIcons();
   }
