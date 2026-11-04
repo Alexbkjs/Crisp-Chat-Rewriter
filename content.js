@@ -134,6 +134,9 @@
   let popupAvatar = null;    // avatar the open popup belongs to
   let pointerAvatar = null;  // avatar currently under the mouse
   let popupTimeout = null;
+  // Grace periods before the popup closes, so there's time to move the mouse onto it
+  const CLOSE_AFTER_AVATAR_MS = 1200;
+  const CLOSE_AFTER_POPUP_MS = 800;
   let altDown = false;
   const suggestionCache = new Map(); // message text → Promise<string[]>
 
@@ -192,6 +195,7 @@
   }
 
   function showReplySuggestions(bubbleEl, avatar) {
+    clearTimeout(popupTimeout); // a pending close belongs to the previous popup
     removePopup();
 
     const messageText = bubbleEl.textContent.trim();
@@ -221,7 +225,8 @@
     // Keep popup alive when hovering over it
     popup.addEventListener('mouseenter', () => clearTimeout(popupTimeout));
     popup.addEventListener('mouseleave', () => {
-      popupTimeout = setTimeout(removePopup, 200);
+      clearTimeout(popupTimeout);
+      popupTimeout = setTimeout(removePopup, CLOSE_AFTER_POPUP_MS);
     });
 
     // Fetch suggestions
@@ -270,7 +275,10 @@
     if (e.relatedTarget && avatar.contains(e.relatedTarget)) return;
 
     if (pointerAvatar === avatar) pointerAvatar = null;
-    if (popupAvatar === avatar) popupTimeout = setTimeout(removePopup, 300);
+    if (popupAvatar === avatar) {
+      clearTimeout(popupTimeout);
+      popupTimeout = setTimeout(removePopup, CLOSE_AFTER_AVATAR_MS);
+    }
   }, true);
 
   // Alt mode: pressing Alt while hovering an avatar shows the suggestions
@@ -325,11 +333,33 @@
     });
   }
 
-  // ── Feature 4: Copy Store Link ──
-  // Copy icon before the profile's employment link: click copies the URL without the protocol,
-  // Alt+click copies the link text
+  // ── Feature 4: Copy / Open Store Link ──
+  // Icons before the profile's employment link. Copy: click copies the URL without the protocol,
+  // Alt+click copies the link text. Open: opens the configured prefix + that same URL in a new
+  // tab, by click or keyboard shortcut.
+
+  const STORE_LINK_SELECTOR = 'a.c-base-link.c-conversation-profile__employment';
+
+  // Cached settings, kept in sync with the options page
+  const storeLinkSettings = {
+    storeLinkOpenVisible: true,
+    storeLinkOpenPrefix: '',
+    storeLinkOpenShortcut: 'Alt+Shift+A'
+  };
+  chrome.storage.sync.get(storeLinkSettings, s => {
+    Object.assign(storeLinkSettings, s);
+    syncOpenLinkIcons();
+  });
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'sync') return;
+    Object.keys(storeLinkSettings).forEach(key => {
+      if (changes[key]) storeLinkSettings[key] = changes[key].newValue;
+    });
+    syncOpenLinkIcons();
+  });
 
   const COPY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  const OPEN_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>';
   const CHECK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 
   function urlWithoutProtocol(link) {
@@ -352,10 +382,62 @@
     }
   }
 
+  function getOpenLinkPrefix() {
+    const prefix = (storeLinkSettings.storeLinkOpenPrefix || '').trim();
+    return /^https?:\/\//i.test(prefix) ? prefix : '';
+  }
+
+  function openStoreLink(link) {
+    const prefix = getOpenLinkPrefix();
+    const value = urlWithoutProtocol(link);
+    if (!prefix || !value) return;
+    window.open(prefix + value, '_blank', 'noopener');
+  }
+
+  function syncOpenLinkIcon(btn) {
+    const shortcut = storeLinkSettings.storeLinkOpenShortcut;
+    const configured = Boolean(getOpenLinkPrefix());
+    btn.hidden = !storeLinkSettings.storeLinkOpenVisible;
+    btn.classList.toggle('crx-open-link--disabled', !configured);
+    btn.title = configured
+      ? `Open in new tab${shortcut ? ` (${shortcut})` : ''}`
+      : 'Set the URL prefix in the extension options';
+  }
+
+  function syncOpenLinkIcons() {
+    document.querySelectorAll('.crx-open-link').forEach(syncOpenLinkIcon);
+  }
+
+  function createOpenLinkIcon(link) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'crx-copy-link crx-open-link';
+    btn.innerHTML = OPEN_ICON;
+    syncOpenLinkIcon(btn);
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openStoreLink(link);
+    });
+    return btn;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const shortcut = storeLinkSettings.storeLinkOpenShortcut;
+    // isTrusted: replaceEditorText dispatches synthetic key events of its own
+    if (!shortcut || e.repeat || !e.isTrusted || shortcutFromEvent(e) !== shortcut) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+
+    const links = Array.from(document.querySelectorAll(STORE_LINK_SELECTOR));
+    const link = links.find(el => el.offsetParent !== null) || links[0];
+    if (link) openStoreLink(link);
+  }, true);
+
   function injectCopyLinkIcons() {
-    document.querySelectorAll('a.c-base-link.c-conversation-profile__employment').forEach(link => {
+    document.querySelectorAll(STORE_LINK_SELECTOR).forEach(link => {
       const prev = link.previousElementSibling;
-      if (prev && prev.classList.contains('crx-copy-link')) return;
+      if (prev && prev.classList.contains('crx-open-link')) return;
 
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -380,7 +462,7 @@
         }, 1200);
       });
 
-      link.before(btn);
+      link.before(btn, createOpenLinkIcon(link));
     });
   }
 

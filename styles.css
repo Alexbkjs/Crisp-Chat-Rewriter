@@ -93,6 +93,15 @@
   opacity: 1;
 }
 
+.crx-copy-link[hidden] {
+  display: none;
+}
+
+.crx-open-link--disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .crx-copy-link--done {
   color: #16a34a;
   opacity: 1;
